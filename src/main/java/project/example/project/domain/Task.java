@@ -1,6 +1,8 @@
 package project.example.project.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import project.example.project.commonDomain.ETaskSeverity;
 import project.example.project.commonDomain.ETaskStatus;
 import project.example.project.exceptions.DomainException;
@@ -8,11 +10,13 @@ import project.example.project.exceptions.DomainException;
 import java.util.List;
 
 @Entity
+@Setter
+@Getter
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
+    private Long id;
     private String title;
     private String description;
     private String deadline;
@@ -23,13 +27,14 @@ public class Task {
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL)
     private List<Person> users;
 
-    // Getters și setters
+
+
 
     public Long getId() {
         return id;
     }
 
-    void setId(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -85,15 +90,20 @@ public class Task {
         if (severity == null) {
             throw new DomainException("Task severity cannot be null.");
         }
-        this.severity = severity;
+        if (severity.equals("LOW") || severity.equals("MEDIUM") || severity.equals("HIGH")){
+            this.severity = severity;
+        }
+        else throw new DomainException("Task severity must be either 'LOW', 'MEDIUM' or 'HIGH'.");
     }
 
     public List<Person> getUsers() {
         return users;
     }
 
-    void setUsers(List<Person> users) {
+    public void setUsers(List<Person> users) {
         this.users = users;
     }
+
+
 }
 
