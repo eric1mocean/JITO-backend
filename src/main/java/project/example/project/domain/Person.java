@@ -129,7 +129,8 @@ public class Person {
         return role;
     }
     public void setRole(String role) {
-        this.role = role;
+
+        if (role.equals("admin") || role.equals("teamleader") || role.equals("developer") || role.equals("user")) this.role = role;
     }
 
 

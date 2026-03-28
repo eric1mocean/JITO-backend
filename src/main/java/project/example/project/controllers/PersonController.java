@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.constraints.Email;
 import project.example.project.DomainExample;
 import project.example.project.IRepositoryExample;
 import project.example.project.commonDomain.CreateUserDTO;
@@ -15,6 +17,8 @@ import project.example.project.domain.Person;
 import project.example.project.domain.Task;
 import project.example.project.repository.PersonRepository;
 import project.example.project.repository.TaskRepository;
+import project.example.project.services.LoginLogger;
+import project.example.project.services.RegisterLogger;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -42,13 +46,21 @@ public class PersonController {
         String datestring = date.toString();
         entityAction.setCreateDate(datestring);
         personRepository.save(entityAction);
+        RegisterLogger registerLogger = new RegisterLogger();
+        registerLogger.logRegisterAction(entityAction.getEmail(), entityAction.getRole().toString());
+
         return new ResponseEntity<>(entityAction, HttpStatus.CREATED);
     }
 
     @GetMapping("/getUsers")
     public ResponseEntity<List<Person>> getAllExamples() {
         List<Person> examples = personRepository.findAll();
+        for (Person person : examples)
+        {
+            person.setTask(null);
+        }
         return new ResponseEntity<>(examples, HttpStatus.OK);
+
     }
 
     @PutMapping("/assignTasks/{userId}/{taskId}")
@@ -106,12 +118,12 @@ public class PersonController {
 
     @PostMapping("/loginUser/")
     public UserLoginDataDTO loginUser(@RequestBody UserLoginRequestDTO userLoginRequestDTO){
-        if (!userLoginRequestDTO.getPassword().equals(userLoginRequestDTO.getConfirmPassword()))
-        {
-            return null;
-        }
+        System.out.println(userLoginRequestDTO.getEmail());
+        System.out.println(userLoginRequestDTO.getPassword());
         Person user=getUserByEmail(userLoginRequestDTO.getEmail());
         if (user==null) return null;
+        System.out.println(user.getEmail());
+        System.out.println(user.getPassword());
         if (!user.getPassword().equals(userLoginRequestDTO.getPassword())) return null;
         UserLoginDataDTO userLoginDataDTO = new UserLoginDataDTO();
         userLoginDataDTO.setId(user.getId());
@@ -119,6 +131,8 @@ public class PersonController {
         userLoginDataDTO.setEmail(user.getEmail());
         userLoginDataDTO.setImage(user.getImage());
         userLoginDataDTO.setRole(user.getRole());
+        LoginLogger loginLogger = new LoginLogger();
+        loginLogger.logLoginAction(userLoginDataDTO.getEmail(), userLoginDataDTO.getRole().toString()); 
         return userLoginDataDTO;
 
 

@@ -9,6 +9,7 @@ import project.example.project.domain.Person;
 import project.example.project.domain.Task;
 import project.example.project.repository.PersonRepository;
 import project.example.project.repository.TaskRepository;
+import project.example.project.services.StatusLogger;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +21,9 @@ public class TaskController {
 
     @Autowired
     private TaskRepository taskRepository;
+
+    @Autowired
+    private PersonRepository userRepository;
 
     @PostMapping("/createTask")
     public ResponseEntity<Task> createTask(@RequestBody CreateTaskDTO createTaskDTO) {
@@ -33,6 +37,8 @@ public class TaskController {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String datestring = date.toString();
         taskRepository.save(entityAction);
+        StatusLogger statusLogger = new StatusLogger();
+        statusLogger.logTaskProgress(entityAction.getId(), entityAction.getStatus().toString());
         return new ResponseEntity<>(entityAction, HttpStatus.CREATED);
     }
 
@@ -49,10 +55,16 @@ public class TaskController {
         if (task == null) {
             return false;
         }
+        String taskStatus=task.getStatus().toString();
+        String newStatus=changeStatusRequestDTO.getNewStatus().toString();
+        if (task.getStatus().equals(changeStatusRequestDTO.getNewStatus())) return true; 
+
         for (Person user : task.getUsers()){
             if (user.getId().equals(changeStatusRequestDTO.getUserId())){
                 task.setStatus(changeStatusRequestDTO.getNewStatus());
                 taskRepository.save(task);
+                StatusLogger statusLogger= new StatusLogger();
+                statusLogger.logTaskProgress(task.getId(), task.getStatus().toString());
                 return true;
             }
         }
@@ -85,6 +97,37 @@ public class TaskController {
         }
         return matches;
     }
+    @GetMapping("/getUsersWithUnassignedTasks")
+    public UserWithUnassignedTasks getUsersWithUnassignedTasks(){
+        List<Task> tasks = taskRepository.findAll();
+        List<TaskDTO> matches = new ArrayList<>();
+        for (Task task : tasks) {
+
+                TaskDTO getTasksDTO = new TaskDTO();
+                getTasksDTO.setId(task.getId());
+                getTasksDTO.setTitle(task.getTitle());
+                getTasksDTO.setDescription(task.getDescription());
+                getTasksDTO.setStatus(task.getStatus());
+                getTasksDTO.setSeverity(task.getSeverity());
+                matches.add(getTasksDTO);
+
+        }
+        List<Person> users = userRepository.findAll();
+        List<UserProperties> userProperties = new ArrayList<>();
+        for (Person user : users) {
+            UserProperties properties = new UserProperties();
+            properties.setUserId(user.getId());
+            properties.setUserName(user.getUsername());
+            properties.setUserImage(user.getImage());
+            properties.setUserEmail(user.getEmail());
+            userProperties.add(properties);
+        }
+        UserWithUnassignedTasks userWithUnassignedTasks = new UserWithUnassignedTasks();
+        userWithUnassignedTasks.setTasks(matches);
+        userWithUnassignedTasks.setUsers(userProperties);
+
+        return userWithUnassignedTasks;
+    }
 
     @GetMapping("/getTask/{taskId}")
     public ResponseEntity<GetTasksDTO> getTask(@PathVariable Long taskId){
@@ -100,6 +143,7 @@ public class TaskController {
         getTasksDTO.setTaskStatus(task.getStatus());
         getTasksDTO.setTaskDescription(task.getDescription());
         getTasksDTO.setTaskSeverity(task.getSeverity());
+        getTasksDTO.setTaskDeadline(task.getDeadline());
         getTasksDTO.setUsers(new ArrayList<>());
         for (Person user : task.getUsers()){
             UserProperties userProperties = new UserProperties();
@@ -112,6 +156,8 @@ public class TaskController {
         return new ResponseEntity<>(getTasksDTO, HttpStatus.OK);
 
     }
+
+
 
     private List<GetTasksDTO> getTasks(){
         List<Task> tasks = taskRepository.findAll();

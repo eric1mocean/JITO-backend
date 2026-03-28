@@ -9,6 +9,17 @@ public class GetTasksDTO {
     private ETaskStatus taskStatus;
     private ETaskSeverity taskSeverity;
     private List<UserProperties> users;
+    private String taskDeadline;
+
+
+    public void setTaskDeadline(String taskDeadline) {
+        this.taskDeadline = taskDeadline;
+    }
+
+    public String getTaskDeadline() {
+        return taskDeadline;
+    }
+
 
     public Long getTaskId() {
         return taskId;

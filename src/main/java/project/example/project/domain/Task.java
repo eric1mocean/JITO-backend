@@ -90,7 +90,7 @@ public class Task {
         if (severity == null) {
             throw new DomainException("Task severity cannot be null.");
         }
-        if (severity.equals("LOW") || severity.equals("MEDIUM") || severity.equals("HIGH")){
+        if (severity == ETaskSeverity.LOW || severity == ETaskSeverity.MEDIUM || severity == ETaskSeverity.HIGH){
             this.severity = severity;
         }
         else throw new DomainException("Task severity must be either 'LOW', 'MEDIUM' or 'HIGH'.");

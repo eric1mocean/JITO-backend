@@ -33,7 +33,7 @@ public class CreateUserDTO {
     }
 
     public void setRole(String role){
-        if (role.equals("admin") || role.equals("teamleader") || role.equals("developer")){
+        if (role.equals("admin") || role.equals("teamleader") || role.equals("developer") || role.equals("user")){
             this.role = role;
         }
         else throw new DomainException("Role should be either 'admin' or 'teamleader' or 'developer'");
