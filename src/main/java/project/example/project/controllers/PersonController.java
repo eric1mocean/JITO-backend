@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.constraints.Email;
 import project.example.project.DomainExample;
@@ -35,7 +36,19 @@ public class PersonController {
     private TaskRepository taskRepository;
 
     @PostMapping("/createUser")
-    public ResponseEntity<Person> saveExample(@RequestBody CreateUserDTO createUserDTO) {
+    public ResponseEntity<Person> saveExample(@RequestBody CreateUserDTO createUserDTO) throws Exception {
+        
+        if (personRepository.existsByUsername(createUserDTO.getUsername())) 
+        {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
+        }
+
+        if (personRepository.existsByEmail(createUserDTO.getEmail()))
+        {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+        }
+        
+        
         Person entityAction = new Person();
         entityAction.setEmail(createUserDTO.getEmail());
         entityAction.setPassword(createUserDTO.getPassword());
@@ -67,6 +80,13 @@ public class PersonController {
     public boolean assignTask(@PathVariable Long userId, @PathVariable Long taskId) {
         Person user = personRepository.findById(userId).orElse(null);
         Task task = taskRepository.findById(taskId).orElse(null);
+        for (Person p : task.getUsers())
+        {
+            if (user.getId().equals(p.getId()))
+            {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This task has already been assigned to this user.");
+            }
+        }
         if (user == null || task == null) {
             return false;
         }

@@ -4,6 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.fasterxml.jackson.databind.deser.DataFormatReaders.Match;
+
 import project.example.project.commonDomain.*;
 import project.example.project.domain.Person;
 import project.example.project.domain.Task;
@@ -71,17 +75,24 @@ public class TaskController {
 
         return false;
     }
-    @DeleteMapping("/deleteTask/{taskId}")
-    public boolean deleteTask(Long taskId){
-        taskRepository.deleteById(taskId);
-        if (taskRepository.findById(taskId).isPresent()) {
-            return false;
+    @DeleteMapping("/deleteTask/{taskId}/{userId}")
+    public boolean deleteTask(Long taskId, Long userId){
+        Person user = userRepository.findById(userId).orElseThrow();
+        if (user.getRole().equals("teamleader"))
+        {
+            taskRepository.deleteById(taskId);
+            if (taskRepository.findById(taskId).isPresent()) 
+            {
+                return false;
+            }
+            else return true;
         }
-        else return true;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User does not have the required rights to perform this operation.");
+        
     }
 
-    @GetMapping("/searchByKeyWord/{keyWord}")
-    public List<TaskDTO> searchTaskByKeyWord(String keyWord){
+    @GetMapping("/searchByKeyWord/{keyWord}/{page}/{pageSize}")
+    public List<TaskDTO> searchTaskByKeyWord(String keyWord, Long page, Long pageSize){
         List<Task> tasks = taskRepository.findAll();
         List<TaskDTO> matches = new ArrayList<>();
         for (Task task : tasks) {
@@ -93,6 +104,22 @@ public class TaskController {
                 getTasksDTO.setStatus(task.getStatus());
                 getTasksDTO.setSeverity(task.getSeverity());
                 matches.add(getTasksDTO);
+            }
+        }
+        for (int i=0;i<matches.size()-1;i++)
+        {
+            for (int j=i+1;j<matches.size();j++)
+            {
+                if (matches.get(i).getTitle().compareTo(matches.get(j).getTitle()) > 0) 
+                {
+                    TaskDTO temp = matches.get(i);
+                    matches.set(i, matches.get(j));
+                    matches.set(j, temp);
+                }
+                else if (matches.get(i).getTitle().compareTo(matches.get(j).getTitle()) == 0)
+                {
+                    
+                }
             }
         }
         return matches;
