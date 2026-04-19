@@ -1,5 +1,6 @@
 package project.example.project.controllers;
 
+import org.aspectj.weaver.ast.Not;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,8 +10,10 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.databind.deser.DataFormatReaders.Match;
 
 import project.example.project.commonDomain.*;
+import project.example.project.domain.Notification;
 import project.example.project.domain.Person;
 import project.example.project.domain.Task;
+import project.example.project.repository.NotificationRepository;
 import project.example.project.repository.PersonRepository;
 import project.example.project.repository.TaskRepository;
 import project.example.project.services.StatusLogger;
@@ -29,6 +32,9 @@ public class TaskController {
     @Autowired
     private PersonRepository userRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     @PostMapping("/createTask")
     public ResponseEntity<Task> createTask(@RequestBody CreateTaskDTO createTaskDTO) {
         Task entityAction = new Task();
@@ -41,23 +47,45 @@ public class TaskController {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String datestring = date.toString();
         taskRepository.save(entityAction);
+        Notification notification = new Notification();
+        notification.setLabel("Task Created");
+        notification.setDescription("Task with title " + entityAction.getTitle() + " has been created.");
+        notification.setActionDate(LocalDate.now().toString());
+        notification.setNotificationType(project.example.project.commonDomain.ENotification.TASK_RELATED);
+        notificationRepository.save(notification);
+
+
         StatusLogger statusLogger = new StatusLogger();
         statusLogger.logTaskProgress(entityAction.getId(), entityAction.getStatus().toString());
         return new ResponseEntity<>(entityAction, HttpStatus.CREATED);
     }
 
-    @GetMapping("/getTasks")
-    public ResponseEntity<List<GetTasksDTO>> getAllTasks() {
+    @GetMapping("/getTasks/{keyWord}")
+    public ResponseEntity<List<GetTasksDTO>> getAllTasks(@PathVariable String keyWord) {
         List<GetTasksDTO> tasksDTO = getTasks();
-        return new ResponseEntity<>(tasksDTO, HttpStatus.OK);
+        List<GetTasksDTO> filteredTasks = new ArrayList<>();
+        for (GetTasksDTO getTasksDTO : tasksDTO) {
+            if (getTasksDTO.getTaskName().toLowerCase().contains(keyWord.toLowerCase()) || getTasksDTO.getTaskDescription().toLowerCase().contains(keyWord.toLowerCase())) {
+                filteredTasks.add(getTasksDTO);
+            }
+        }
+        return new ResponseEntity<>(filteredTasks, HttpStatus.OK);
     }
 
-    @PutMapping("/changeStatus")
-    public boolean changeStatus(ChangeStatusRequestDTO changeStatusRequestDTO){
+    @PutMapping("/changeStatus/{userId}")
+    public boolean changeStatus(@PathVariable Long userId, @RequestBody ChangeStatusRequestDTO changeStatusRequestDTO){
 
+        Person person = userRepository.findById(userId).orElse(null);
+        if (!person.getRole().equals("user") || !person.getRole().equals("teamleader"))
+        {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only users can change task status.");
+        }
         Task task = taskRepository.findById(changeStatusRequestDTO.getTaskId()).orElse(null);
         if (task == null) {
-            return false;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
+        }
+        if (person.getTask() == null || !person.getTask().getId().equals(changeStatusRequestDTO.getTaskId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
         }
         String taskStatus=task.getStatus().toString();
         String newStatus=changeStatusRequestDTO.getNewStatus().toString();
@@ -67,6 +95,12 @@ public class TaskController {
             if (user.getId().equals(changeStatusRequestDTO.getUserId())){
                 task.setStatus(changeStatusRequestDTO.getNewStatus());
                 taskRepository.save(task);
+                Notification notification = new Notification();
+                notification.setLabel("Task Status Changed");
+                notification.setDescription("Task with title " + task.getTitle() + " has been updated to status " + task.getStatus());
+                notification.setActionDate(LocalDate.now().toString());
+                notification.setNotificationType(project.example.project.commonDomain.ENotification.TASK_RELATED);
+                notificationRepository.save(notification);
                 StatusLogger statusLogger= new StatusLogger();
                 statusLogger.logTaskProgress(task.getId(), task.getStatus().toString());
                 return true;
@@ -75,19 +109,64 @@ public class TaskController {
 
         return false;
     }
+
+    @PutMapping("/modifyTask/{userId}")
+    public boolean modifyTask(@PathVariable Long userId, @RequestBody ModifyTaskRequestDTO modifyTaskRequestDTO){
+        Person user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found.");
+        }
+        if (!user.getRole().equals("teamleader")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only team leaders are allowed to modify tasks.");
+        }
+
+        Task task = taskRepository.findById(modifyTaskRequestDTO.getTaskId()).orElse(null);
+        if (task == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
+        }
+        task.setTitle(modifyTaskRequestDTO.getTitle());
+        task.setDescription(modifyTaskRequestDTO.getDescription());
+        task.setDeadline(modifyTaskRequestDTO.getDeadline());
+        task.setSeverity(modifyTaskRequestDTO.getSeverity());
+        taskRepository.save(task);
+        return true;
+    }
+
     @DeleteMapping("/deleteTask/{taskId}/{userId}")
-    public boolean deleteTask(Long taskId, Long userId){
+    public boolean deleteTask(@PathVariable Long taskId, @PathVariable Long userId){
         Person user = userRepository.findById(userId).orElseThrow();
         if (user.getRole().equals("teamleader"))
         {
+            Task task = taskRepository.findById(taskId).orElse(null);
+            if (task == null) {
+                return false;
+            }
+            List<Person> users = userRepository.findByTaskId(taskId);
+
+            for (Person p : users) {
+                p.setTask(null);
+            }
+
+            userRepository.saveAll(users);
+            task.setUsers(null);
+            taskRepository.save(task);
             taskRepository.deleteById(taskId);
             if (taskRepository.findById(taskId).isPresent()) 
             {
                 return false;
             }
-            else return true;
+            else 
+            {
+                Notification notification = new Notification();
+                notification.setLabel("Task Deleted");
+                notification.setDescription("Task with title " + task.getTitle() + " has been deleted.");
+                notification.setActionDate(LocalDate.now().toString());
+                notification.setNotificationType(project.example.project.commonDomain.ENotification.TASK_RELATED);
+                notificationRepository.save(notification);
+            }
+            return true;
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User does not have the required rights to perform this operation.");
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be a team leader to perform this operation.");
         
     }
 
@@ -118,11 +197,22 @@ public class TaskController {
                 }
                 else if (matches.get(i).getTitle().compareTo(matches.get(j).getTitle()) == 0)
                 {
-                    
+                    if (matches.get(i).getDescription().compareTo(matches.get(j).getDescription()) > 0) 
+                    {
+                        TaskDTO temp = matches.get(i);
+                        matches.set(i, matches.get(j));
+                        matches.set(j, temp);
+                    }
                 }
             }
         }
-        return matches;
+        List<TaskDTO> paginatedMatches = new ArrayList<>();
+        long startIndex = (int)((page - 1) * pageSize);
+        long endIndex = Math.min(startIndex + pageSize, matches.size());
+        for (long i = startIndex; i < endIndex; i++) {
+            paginatedMatches.add(matches.get((int) i));
+        }
+        return paginatedMatches;
     }
     @GetMapping("/getUsersWithUnassignedTasks")
     public UserWithUnassignedTasks getUsersWithUnassignedTasks(){

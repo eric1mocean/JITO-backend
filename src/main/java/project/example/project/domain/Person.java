@@ -22,6 +22,9 @@ public class Person {
     private String updateDate;
     private String image;
 
+    @Column(nullable = false)
+    private boolean active = false;
+
     @Column(nullable = true)
     private String role = "developer";
 
@@ -133,5 +136,12 @@ public class Person {
         if (role.equals("admin") || role.equals("teamleader") || role.equals("developer") || role.equals("user")) this.role = role;
     }
 
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public boolean getActive() {
+        return active;
+    }
 
 }
