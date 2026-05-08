@@ -72,20 +72,12 @@ public class TaskController {
         return new ResponseEntity<>(filteredTasks, HttpStatus.OK);
     }
 
-    @PutMapping("/changeStatus/{userId}")
-    public boolean changeStatus(@PathVariable Long userId, @RequestBody ChangeStatusRequestDTO changeStatusRequestDTO){
+    @PutMapping("/changeStatus")
+    public boolean changeStatus(ChangeStatusRequestDTO changeStatusRequestDTO){
 
-        Person person = userRepository.findById(userId).orElse(null);
-        if (!person.getRole().equals("user") || !person.getRole().equals("teamleader"))
-        {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only users can change task status.");
-        }
         Task task = taskRepository.findById(changeStatusRequestDTO.getTaskId()).orElse(null);
         if (task == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
-        }
-        if (person.getTask() == null || !person.getTask().getId().equals(changeStatusRequestDTO.getTaskId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
+            return false;
         }
         String taskStatus=task.getStatus().toString();
         String newStatus=changeStatusRequestDTO.getNewStatus().toString();
@@ -109,29 +101,6 @@ public class TaskController {
 
         return false;
     }
-
-    @PutMapping("/modifyTask/{userId}")
-    public boolean modifyTask(@PathVariable Long userId, @RequestBody ModifyTaskRequestDTO modifyTaskRequestDTO){
-        Person user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found.");
-        }
-        if (!user.getRole().equals("teamleader")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only team leaders are allowed to modify tasks.");
-        }
-
-        Task task = taskRepository.findById(modifyTaskRequestDTO.getTaskId()).orElse(null);
-        if (task == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task not found.");
-        }
-        task.setTitle(modifyTaskRequestDTO.getTitle());
-        task.setDescription(modifyTaskRequestDTO.getDescription());
-        task.setDeadline(modifyTaskRequestDTO.getDeadline());
-        task.setSeverity(modifyTaskRequestDTO.getSeverity());
-        taskRepository.save(task);
-        return true;
-    }
-
     @DeleteMapping("/deleteTask/{taskId}/{userId}")
     public boolean deleteTask(@PathVariable Long taskId, @PathVariable Long userId){
         Person user = userRepository.findById(userId).orElseThrow();

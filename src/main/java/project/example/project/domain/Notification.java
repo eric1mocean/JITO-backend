@@ -61,10 +61,6 @@ public class Notification {
     public boolean getRead() {
         return isRead;
     }
-
-    public ENotification getNotificationType() {
-        return notificationType;
-    }
     
 
     

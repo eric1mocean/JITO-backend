@@ -1535,6 +1535,3 @@ insert into person (active,activity_status,create_date,email,image,password,role
 2026-04-09 18:18:41.720453+03:00 jdbc[14]: exception
 org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "PERSONS" not found; SQL statement:
 SELECT * FROM persons [42102-232]
-2026-04-18 10:22:09.744102+03:00 jdbc[14]: exception
-org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "NOTIFFICATION" not found; SQL statement:
-SELECT * FROM notiffication [42102-232]
