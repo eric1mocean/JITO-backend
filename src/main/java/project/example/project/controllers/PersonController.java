@@ -121,6 +121,31 @@ public class PersonController {
         
     }
 
+    @GetMapping("/getAllInactiveUsersV2/{userId}") 
+    public List<Person> getAllInactiveUsersV2(@PathVariable Long userId) {
+
+        Person user = personRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found.");
+        }
+        if (user.getRole().equals("admin")) {
+            List<Person> users = personRepository.findAll();
+            List<Person> inactiveUsers = new ArrayList<>();
+            for (Person p : users) {
+                if (p.getActive() == false) {
+                    p.setTask(null);
+                    inactiveUsers.add(p);
+                }
+            }
+            return inactiveUsers;
+            
+        }
+        else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be an admin to perform this operation.");
+        }
+        
+    }
+
     @PutMapping("/approveUserActivationRequest/{userToActivateId}/{userActivatingId}") 
         public void approveUserActivationRequest(@PathVariable Long userToActivateId, @PathVariable Long userActivatingId) {
         Person userActivating = personRepository.findById(userActivatingId).orElse(null);
