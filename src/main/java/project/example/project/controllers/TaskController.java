@@ -55,8 +55,8 @@ public class TaskController {
         notificationRepository.save(notification);
 
 
-        StatusLogger statusLogger = new StatusLogger();
-        statusLogger.logTaskProgress(entityAction.getId(), entityAction.getStatus().toString());
+        //StatusLogger statusLogger = new StatusLogger();
+        //statusLogger.logTaskProgress(entityAction.getId(), entityAction.getStatus().toString());
         return new ResponseEntity<>(entityAction, HttpStatus.CREATED);
     }
 
@@ -93,8 +93,8 @@ public class TaskController {
                 notification.setActionDate(LocalDate.now().toString());
                 notification.setNotificationType(project.example.project.commonDomain.ENotification.TASK_RELATED);
                 notificationRepository.save(notification);
-                StatusLogger statusLogger= new StatusLogger();
-                statusLogger.logTaskProgress(task.getId(), task.getStatus().toString());
+                //StatusLogger statusLogger= new StatusLogger();
+                //statusLogger.logTaskProgress(task.getId(), task.getStatus().toString());
                 return true;
             }
         }
