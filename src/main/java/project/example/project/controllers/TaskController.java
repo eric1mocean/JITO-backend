@@ -73,7 +73,7 @@ public class TaskController {
     }
 
     @PutMapping("/changeStatus")
-    public boolean changeStatus(ChangeStatusRequestDTO changeStatusRequestDTO){
+    public boolean changeStatus(@RequestBody ChangeStatusRequestDTO changeStatusRequestDTO){
 
         Task task = taskRepository.findById(changeStatusRequestDTO.getTaskId()).orElse(null);
         if (task == null) {
@@ -101,6 +101,8 @@ public class TaskController {
 
         return false;
     }
+
+
     @DeleteMapping("/deleteTask/{taskId}/{userId}")
     public boolean deleteTask(@PathVariable Long taskId, @PathVariable Long userId){
         Person user = userRepository.findById(userId).orElseThrow();
