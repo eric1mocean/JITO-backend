@@ -102,6 +102,47 @@ public class TaskController {
         return false;
     }
 
+    @PutMapping("/updateTaskByTeamleader/{taskId}/{userId}")
+    public boolean updateTaskByTeamleader(
+            @PathVariable Long taskId,
+            @PathVariable Long userId,
+            @RequestBody UpdateTaskByTeamleaderDTO updateTaskByTeamleaderDTO) {
+
+        Person user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found.");
+        }
+        if (!"teamleader".equals(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be a team leader to perform this operation.");
+        }
+
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found.");
+        }
+
+        if (updateTaskByTeamleaderDTO.getTitle() != null) {
+            task.setTitle(updateTaskByTeamleaderDTO.getTitle());
+        }
+        if (updateTaskByTeamleaderDTO.getDescription() != null) {
+            task.setDescription(updateTaskByTeamleaderDTO.getDescription());
+        }
+        if (updateTaskByTeamleaderDTO.getStatus() != null) {
+            task.setStatus(updateTaskByTeamleaderDTO.getStatus());
+        }
+
+        taskRepository.save(task);
+
+        Notification notification = new Notification();
+        notification.setLabel("Task Updated");
+        notification.setDescription("Task with title " + task.getTitle() + " was updated by team leader.");
+        notification.setActionDate(LocalDate.now().toString());
+        notification.setNotificationType(project.example.project.commonDomain.ENotification.TASK_RELATED);
+        notificationRepository.save(notification);
+
+        return true;
+    }
+
 
     @DeleteMapping("/deleteTask/{taskId}/{userId}")
     public boolean deleteTask(@PathVariable Long taskId, @PathVariable Long userId){
