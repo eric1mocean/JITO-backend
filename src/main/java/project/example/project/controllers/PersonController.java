@@ -248,7 +248,10 @@ public class PersonController {
                 Notification notification = new Notification();
                 notification.setLabel("User Deleted");
                 notification.setDescription("User with name " + userToDelete.getUsername() + " and email " + userToDelete.getEmail() + " has been deleted.");
-                    return true;
+                notification.setActionDate(LocalDate.now().toString());
+                notification.setNotificationType(project.example.project.commonDomain.ENotification.USER_RELATED);
+                notificationRepository.save(notification);
+                return true;
             }
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be an admin to perform this operation.");
